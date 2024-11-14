@@ -1,58 +1,45 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
+import plotly.express as px
+
+def create_stacked_bar(df):
+    fig = go.Figure()
+    for outcome, color in [
+        ('KO_Ratio', '#ff4444'),
+        ('Submission_Ratio', '#33b5e5'),
+        ('Decision_Ratio', '#00C851'),
+        ('Other_Ratio', '#ffbb33')
+    ]:
+        fig.add_trace(go.Bar(
+            name=outcome.replace('_Ratio', ''),
+            x=df['Division'],
+            y=df[outcome],
+            marker_color=color
+        ))
+    return fig
 
 def main():
     st.title("UFC Fight Outcomes Analysis")
     
-    # File upload
-    st.header("Upload Data")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     
     if uploaded_file is not None:
-        # Read the data
         df = pd.read_csv(uploaded_file)
         
-        # Display raw data
         st.header("Raw Data")
         st.dataframe(df)
         
         # Calculate ratios
-        df['KO_Ratio'] = df['(T)KOs'] / df['Total Fights']
-        df['Submission_Ratio'] = df['Submissions'] / df['Total Fights']
-        df['Decision_Ratio'] = df['Total Decisions'] / df['Total Fights']
-        df['Other_Ratio'] = (df['No Contests'] + df['DQs']) / df['Total Fights']
+        total_fights = df['Total Fights']
+        df['KO_Ratio'] = df['(T)KOs'] / total_fights
+        df['Submission_Ratio'] = df['Submissions'] / total_fights
+        df['Decision_Ratio'] = df['Total Decisions'] / total_fights
+        df['Other_Ratio'] = (df['No Contests'] + df['DQs']) / total_fights
         
-        # Visualization 1: Stacked Bar Chart of Outcome Ratios
+        # Visualization 1
         st.header("Fight Outcome Ratios by Weight Class")
-        fig1 = go.Figure()
-        
-        fig1.add_trace(go.Bar(
-            name='KO/TKO',
-            x=df['Division'],
-            y=df['KO_Ratio'],
-            marker_color='#ff4444'
-        ))
-        fig1.add_trace(go.Bar(
-            name='Submission',
-            x=df['Division'],
-            y=df['Submission_Ratio'],
-            marker_color='#33b5e5'
-        ))
-        fig1.add_trace(go.Bar(
-            name='Decision',
-            x=df['Division'],
-            y=df['Decision_Ratio'],
-            marker_color='#00C851'
-        ))
-        fig1.add_trace(go.Bar(
-            name='Other (NC/DQ)',
-            x=df['Division'],
-            y=df['Other_Ratio'],
-            marker_color='#ffbb33'
-        ))
-        
+        fig1 = create_stacked_bar(df)
         fig1.update_layout(
             barmode='stack',
             xaxis_tickangle=-45,
@@ -62,7 +49,7 @@ def main():
         )
         st.plotly_chart(fig1, use_container_width=True)
         
-        # Visualization 2: Total Fights by Division
+        # Visualization 2
         st.header("Total Fights by Weight Class")
         fig2 = px.bar(
             df,
@@ -75,7 +62,7 @@ def main():
         fig2.update_layout(xaxis_tickangle=-45)
         st.plotly_chart(fig2, use_container_width=True)
         
-        # Detailed Statistics
+        # Statistics section
         st.header("Detailed Statistics by Weight Class")
         selected_division = st.selectbox(
             "Select Weight Class",
@@ -84,18 +71,20 @@ def main():
         
         div_data = df[df['Division'] == selected_division].iloc[0]
         
-        col1, col2, col3, col4 = st.columns(4)
+        # Display metrics
+        cols = st.columns(4)
+        metrics = [
+            ("KO/TKO Rate", div_data['KO_Ratio']),
+            ("Submission Rate", div_data['Submission_Ratio']),
+            ("Decision Rate", div_data['Decision_Ratio']),
+            ("Other Rate", div_data['Other_Ratio'])
+        ]
         
-        with col1:
-            st.metric("KO/TKO Rate", f"{div_data['KO_Ratio']:.1%}")
-        with col2:
-            st.metric("Submission Rate", f"{div_data['Submission_Ratio']:.1%}")
-        with col3:
-            st.metric("Decision Rate", f"{div_data['Decision_Ratio']:.1%}")
-        with col4:
-            st.metric("Other Rate", f"{div_data['Other_Ratio']:.1%}")
+        for col, (label, value) in zip(cols, metrics):
+            with col:
+                st.metric(label, f"{value:.1%}")
         
-        # Pie chart for selected division
+        # Pie chart
         fig3 = px.pie(
             values=[
                 div_data['(T)KOs'],
