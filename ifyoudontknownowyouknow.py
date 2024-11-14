@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
+from plotly import figure_factory as ff
 
 def main():
     st.title("UFC Fight Outcomes Analysis")
